@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Environment files (we commit .env for this school project for simplicity,
+# but in a real app secrets would NOT be committed)
+# .env
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+
+# Prisma generated client
+**/generated/
+
+# Övriga filer
+.pdf
