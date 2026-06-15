@@ -1,5 +1,5 @@
 # ---------------------------------------------------------------------------
-# This Dockerfile describes how to package the api-service into a container
+# This Dockerfile describes how to package the product-service into a container
 # image. docker compose builds it automatically.
 # ---------------------------------------------------------------------------
 

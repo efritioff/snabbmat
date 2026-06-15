@@ -1,7 +1,7 @@
 {
-  "name": "api-service",
+  "name": "product-service",
   "version": "1.0.0",
-  "description": "Public-facing HTTP API for the Snabbmat ordering system",
+  "description": "Serves products and menus for the Snabbmat ordering system",
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",

@@ -56,6 +56,15 @@ services:
     # No "ports:" here on purpose. The api-service is reached only THROUGH
     # nginx, never directly from your host.
 
+  # --- Product catalog / menu ----------------------------------------------
+  product-service:
+    build: ./services/product-service
+    environment:
+      PORT: 3000
+    networks:
+      - snabbmat-net
+    # Internal only, just like api-service. Reached via nginx at /api/products.
+
   # --- nginx: the single public door ---------------------------------------
   nginx:
     image: nginx:1.27-alpine
