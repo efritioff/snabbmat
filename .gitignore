@@ -22,4 +22,4 @@ Thumbs.db
 **/generated/
 
 # Övriga filer
-.pdf
+*.pdf
