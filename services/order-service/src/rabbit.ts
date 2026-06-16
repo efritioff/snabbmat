@@ -19,6 +19,11 @@ export async function connectRabbit() {
 // Skicka ett event. routingKey = etiketten, t.ex. "order.created".
 // payload = själva datan (vårt order-objekt).
 export function publishEvent(routingKey: string, payload: unknown) {
+  // Om vi inte är anslutna (t.ex. under ett test) hoppar vi över tyst.
+  if (!channel) {
+    console.warn(`Skipping publish "${routingKey}" — not connected to RabbitMQ`);
+    return;
+  }
   const body = Buffer.from(JSON.stringify(payload));   // 1. gör om objektet till text→bytes
   channel.publish(EXCHANGE, routingKey, body);          // 2. lägg brevet i brevlådan med etiketten
   console.log(`Published event "${routingKey}"`);       // 3. logga så vi ser att det hände

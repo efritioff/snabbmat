@@ -38,6 +38,9 @@ services:
     # postgres container you already have running on port 5432.
     volumes:
       - pgdata:/var/lib/postgresql/data
+      # Mount our DDL + seed script. Postgres automatically runs any .sql in
+      # this folder the FIRST time it starts with an empty data volume.
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
       interval: 10s
@@ -61,6 +64,11 @@ services:
     build: ./services/product-service
     environment:
       PORT: 3000
+      # Connection string product-service uses to read the menu from Postgres.
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+    depends_on:
+      postgres:
+        condition: service_healthy   # wait until the DB (and its seed) is ready
     networks:
       - snabbmat-net
     # Internal only, just like api-service. Reached via nginx at /api/products.
