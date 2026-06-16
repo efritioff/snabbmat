@@ -4,8 +4,7 @@ node_modules/
 # Build output
 dist/
 
-# Environment files (we commit .env for this school project for simplicity,
-# but in a real app secrets would NOT be committed)
+# Environment files (Jag väljer att commita .env endast för inlämning av skoluppgiften.)
 # .env
 
 # Logs

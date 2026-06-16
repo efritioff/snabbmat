@@ -1,4 +1,5 @@
 import Fastify from "fastify";
+import { connectRabbit, publishEvent } from "./rabbit.js";
 
 const app = Fastify({ logger: true });
 
@@ -23,13 +24,16 @@ app.post("/orders", async (request, reply) => {
   // c) Spara den
   orders.push(order);
 
+  publishEvent("order.created", order);
+
   // d) Svara med 201 = "skapad"
   return reply.code(201).send(order);
 });
 
 const port = Number(process.env.PORT) || 3000;
-app
-  .listen({ port, host: "0.0.0.0" })
+
+connectRabbit()                                       // anslut FÖRST
+  .then(() => app.listen({ port, host: "0.0.0.0" }))  // starta servern sen
   .then(() => app.log.info(`order-service listening on ${port}`))
   .catch((err) => {
     app.log.error(err);
