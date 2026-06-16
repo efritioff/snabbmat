@@ -1,0 +1,25 @@
+name: CI
+
+# Kör vid varje push (till alla brancher).
+on: push
+
+jobs:
+  test:
+    runs-on: ubuntu-latest # en gratis Linux-server hos GitHub
+
+    steps:
+      - name: Hämta koden
+        uses: actions/checkout@v4
+
+      - name: Installera Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Installera paket (order-service)
+        working-directory: services/order-service
+        run: npm install
+
+      - name: Kör tester (order-service)
+        working-directory: services/order-service
+        run: npm test
