@@ -1,5 +1,5 @@
 # ---------------------------------------------------------------------------
-# This Dockerfile describes how to package the order-service into a container
+# This Dockerfile describes how to package the notification-service into a container
 # image. docker compose builds it automatically.
 # ---------------------------------------------------------------------------
 

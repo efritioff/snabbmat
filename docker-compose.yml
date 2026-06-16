@@ -65,6 +65,30 @@ services:
       - snabbmat-net
     # Internal only, just like api-service. Reached via nginx at /api/products.
 
+  # --- Orders: accepts orders via HTTP -------------------------------------
+  order-service:
+    build: ./services/order-service
+    environment:
+      PORT: 3000
+    networks:
+      - snabbmat-net
+    # Reached via nginx at /api/orders. (RabbitMQ env will be added when we
+    # wire up events in the next step.)
+
+  # --- Kitchen: listens for order events -----------------------------------
+  kitchen-service:
+    build: ./services/kitchen-service
+    environment:
+      PORT: 3000
+      RABBITMQ_URL: amqp://${RABBITMQ_DEFAULT_USER}:${RABBITMQ_DEFAULT_PASS}@rabbitmq:5672
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - snabbmat-net
+    # No nginx routing: kitchen-service is reached only via RabbitMQ events,
+    # never directly over HTTP from outside.
+
   # --- nginx: the single public door ---------------------------------------
   nginx:
     image: nginx:1.27-alpine

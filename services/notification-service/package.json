@@ -1,7 +1,7 @@
 {
-  "name": "order-service",
+  "name": "notification-service",
   "version": "1.0.0",
-  "description": "Handles customer orders for the Snabbmat ordering system",
+  "description": "Notification service: notifies customers for the Snabbmat ordering system",
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
