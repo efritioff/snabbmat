@@ -14,6 +14,9 @@ client ──▶ nginx :80 ──▶ api-service ──▶ (RabbitMQ events) ─
 Only **nginx** is exposed to the outside world (port 80). All internal
 services live on a private Docker network and cannot be reached directly.
 
+> Note: after `docker compose up --build`, if requests 404, restart nginx so it
+> picks up fresh service IPs: `docker compose restart nginx`.
+
 ## How to start
 
 You need Docker Desktop running. Then, from the project root:
@@ -27,15 +30,17 @@ take a few minutes. After that it is cached and fast.
 
 ## Public entry point
 
-All traffic enters through nginx. On this machine we publish it on host port
-**8080** (because Apache/XAMPP already uses port 80). Inside its container
-nginx still listens on port 80.
+All traffic enters through nginx on **port 80** — the single public entry
+point. Internal services are not reachable directly from outside.
 
-| URL                               | What it does                          |
-| --------------------------------- | ------------------------------------- |
-| http://localhost:8080/health      | nginx gateway health check            |
-| http://localhost:8080/api/health  | api-service health (proxied by nginx) |
-| http://localhost:8080/api/        | api-service root                      |
+| URL                            | What it does                          |
+| ------------------------------ | ------------------------------------- |
+| http://localhost/health        | nginx gateway health check            |
+| http://localhost/api/products  | the menu (product-service, from PostgreSQL) |
+| http://localhost/api/orders    | create an order (POST, order-service) |
+
+> If port 80 is already in use on your machine (e.g. Apache/XAMPP), either stop
+> that service or change the nginx mapping in `docker-compose.yml` to `"8080:80"`.
 
 ## Useful during development
 
