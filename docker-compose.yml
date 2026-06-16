@@ -124,8 +124,14 @@ services:
       - "80:80"   # the ONLY port exposed to the outside world
     volumes:
       - ./gateway/nginx.conf:/etc/nginx/nginx.conf:ro
+    # Wait for the services nginx routes to, so their names resolve at startup.
     depends_on:
       - api-service
+      - product-service
+      - order-service
+    # If nginx still starts before a service is resolvable, restart it instead
+    # of crashing for good.
+    restart: unless-stopped
     networks:
       - snabbmat-net
 
