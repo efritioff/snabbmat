@@ -13,6 +13,12 @@ export async function connectRabbit() {
   return channel;
 }
 
+export function publishEvent(routingKey: string, payload: unknown) {
+  const body = Buffer.from(JSON.stringify(payload));
+  channel.publish(EXCHANGE, routingKey, body);
+  console.log(`Published event "${routingKey}"`);
+}
+
 // NYTT: lyssna på event som matchar ett mönster (t.ex. "order.created").
 // queueName = köets namn, pattern = vilken etikett vi vill ha,
 // handler = funktionen som körs för varje meddelande.

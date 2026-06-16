@@ -1,6 +1,5 @@
 import Fastify from "fastify";
-import { connectRabbit, consumeEvents } from "./rabbit.js";
-
+import { connectRabbit, consumeEvents, publishEvent } from "./rabbit.js";
 
 const app = Fastify({ logger: true });
 
@@ -15,6 +14,9 @@ connectRabbit()
     // Börja lyssna på nya ordrar
     consumeEvents("kitchen-queue", "order.created", (routingKey, order) => {
       console.log(`👨‍🍳 Köket tog emot order ${order.id} — lagar maten...`);
+
+      // Maten är klar — skicka vidare
+      publishEvent("order.ready", order);
     });
     return app.listen({ port, host: "0.0.0.0" });
   })
