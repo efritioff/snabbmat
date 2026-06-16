@@ -1,4 +1,6 @@
 import Fastify from "fastify";
+import { connectRabbit, consumeEvents } from "./rabbit.js";
+
 
 const app = Fastify({ logger: true });
 
@@ -7,8 +9,15 @@ app.get("/health", async () => {
 });
 
 const port = Number(process.env.PORT) || 3000;
-app
-  .listen({ port, host: "0.0.0.0" })
+
+connectRabbit()
+  .then(() => {
+    // Börja lyssna på nya ordrar
+    consumeEvents("kitchen-queue", "order.created", (routingKey, order) => {
+      console.log(`👨‍🍳 Köket tog emot order ${order.id} — lagar maten...`);
+    });
+    return app.listen({ port, host: "0.0.0.0" });
+  })
   .then(() => app.log.info(`kitchen-service listening on ${port}`))
   .catch((err) => {
     app.log.error(err);
