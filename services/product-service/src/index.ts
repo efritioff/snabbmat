@@ -1,10 +1,15 @@
 import Fastify from "fastify";
+import { z } from "zod";
 import pg from "pg";
 
 const app = Fastify({ logger: true });
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 
-
+// Validering: produkt-id måste vara ett positivt heltal.
+// z.coerce gör om strängen från URL:en ("3") till ett tal innan kontrollen.
+const productIdSchema = z.object({
+  id: z.coerce.number().int().positive(),
+});
 
 app.get("/health", async () => {
   return { status: "ok", service: "product-service" };
@@ -18,8 +23,12 @@ app.get("/products", async () => {
 
 
 app.get("/products/:id", async (request, reply) => {
-  const { id } = request.params as { id: string };
-  const result = await pool.query("SELECT * FROM products WHERE id = $1", [Number(id)]);
+  const parsed = productIdSchema.safeParse(request.params);
+  if (!parsed.success) {
+    return reply.code(400).send({ error: "Invalid product id" });
+  }
+  const id = parsed.data.id;
+  const result = await pool.query("SELECT * FROM products WHERE id = $1", [id]);
 
   if (result.rows.length === 0) {
     return reply.code(404).send({ error: "Product not found" });

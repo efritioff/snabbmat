@@ -1,9 +1,15 @@
 import Fastify from "fastify";
+import { z } from "zod";
 import { connectRabbit, consumeEvents, publishEvent } from "./rabbit.js";
 import { pool } from "./db.js";
 
 // Exporteras så testet kan importera appen och testa rutterna direkt.
 export const app = Fastify({ logger: true });
+
+// Validering: order-id måste se ut som "ord-123".
+const orderIdSchema = z.object({
+  id: z.string().regex(/^ord-\d+$/, "Invalid order id"),
+});
 
 app.get("/health", async () => {
   return { status: "ok", service: "kitchen-service" };
@@ -23,7 +29,11 @@ app.get("/orders", async () => {
 
 // --- POST /orders/:id/ready : kökspersonalen markerar en order som klar -----
 app.post("/orders/:id/ready", async (request, reply) => {
-  const { id } = request.params as { id: string };
+  const parsed = orderIdSchema.safeParse(request.params);
+  if (!parsed.success) {
+    return reply.code(400).send({ error: "Invalid order id" });
+  }
+  const { id } = parsed.data;
 
   const result = await pool.query(
     "UPDATE orders SET status = 'READY' WHERE id = $1 RETURNING *",

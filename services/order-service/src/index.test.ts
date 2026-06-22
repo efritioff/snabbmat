@@ -18,6 +18,27 @@ describe("POST /orders", () => {
     expect(order.items).toHaveLength(1);
     expect(order.id).toMatch(/^ord-/); // id:t ska börja med "ord-"
   });
+
+  it("avvisar en tom order med 400 (validering)", async () => {
+    const response = await app.inject({
+      method: "POST",
+      url: "/orders",
+      payload: { items: [] },
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json().error).toBe("Invalid order");
+  });
+
+  it("avvisar negativt antal med 400 (validering)", async () => {
+    const response = await app.inject({
+      method: "POST",
+      url: "/orders",
+      payload: { items: [{ productId: 1, quantity: -5 }] },
+    });
+
+    expect(response.statusCode).toBe(400);
+  });
 });
 
 describe("GET /health", () => {

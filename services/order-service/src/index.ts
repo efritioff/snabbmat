@@ -1,11 +1,27 @@
 import Fastify from "fastify";
+import { z } from "zod";
 import { connectRabbit, publishEvent } from "./rabbit.js";
 import { pool } from "./db.js";
 
 // Exporteras så att testet kan importera appen och testa rutterna direkt.
 export const app = Fastify({ logger: true });
 
-type OrderItem = { productId: number; quantity: number };
+// --- Valideringsscheman (Zod) ----------------------------------------------
+// All input valideras innan vi rör databasen. Ogiltig input -> 400.
+const orderSchema = z.object({
+  items: z
+    .array(
+      z.object({
+        productId: z.number().int().positive(),
+        quantity: z.number().int().positive(),
+      })
+    )
+    .min(1, "Order must contain at least one item"),
+});
+
+const orderIdSchema = z.object({
+  id: z.string().regex(/^ord-\d+$/, "Invalid order id"),
+});
 
 app.get("/health", async () => {
   return { status: "ok", service: "order-service" };
@@ -13,8 +29,14 @@ app.get("/health", async () => {
 
 // --- POST /orders : skapa en order och spara den i databasen ---------------
 app.post("/orders", async (request, reply) => {
-  const body = request.body as { items: OrderItem[] };
-  const items = body.items;
+  // Validera kundens input mot schemat.
+  const parsed = orderSchema.safeParse(request.body);
+  if (!parsed.success) {
+    return reply
+      .code(400)
+      .send({ error: "Invalid order", details: parsed.error.issues });
+  }
+  const items = parsed.data.items;
 
   // Räkna ut totalpriset från de RIKTIGA priserna i databasen.
   const priceRes = await pool.query(
@@ -60,7 +82,11 @@ app.post("/orders", async (request, reply) => {
 
 // --- GET /orders/:id : hämta en sparad order (med dess rader) ---------------
 app.get("/orders/:id", async (request, reply) => {
-  const { id } = request.params as { id: string };
+  const parsed = orderIdSchema.safeParse(request.params);
+  if (!parsed.success) {
+    return reply.code(400).send({ error: "Invalid order id" });
+  }
+  const { id } = parsed.data;
   const orderRes = await pool.query("SELECT * FROM orders WHERE id = $1", [id]);
   if (orderRes.rows.length === 0) {
     return reply.code(404).send({ error: "Order not found" });
