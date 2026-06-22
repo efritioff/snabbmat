@@ -80,9 +80,13 @@ services:
       PORT: 3000
       # Address order-service uses to reach RabbitMQ (internal only).
       RABBITMQ_URL: amqp://${RABBITMQ_DEFAULT_USER}:${RABBITMQ_DEFAULT_PASS}@rabbitmq:5672
+      # Persistent storage of orders.
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
     depends_on:
       rabbitmq:
         condition: service_healthy   # wait until RabbitMQ is ready before starting
+      postgres:
+        condition: service_healthy   # wait until the DB (and its tables) is ready
     networks:
       - snabbmat-net
     # Reached via nginx at /api/orders.

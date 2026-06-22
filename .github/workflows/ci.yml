@@ -7,6 +7,22 @@ jobs:
   test:
     runs-on: ubuntu-latest # en gratis Linux-server hos GitHub
 
+    # En riktig PostgreSQL startas åt testerna (order-service sparar i DB).
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: snabbmat
+          POSTGRES_PASSWORD: snabbmat
+          POSTGRES_DB: snabbmat
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - name: Hämta koden
         uses: actions/checkout@v4
@@ -16,10 +32,17 @@ jobs:
         with:
           node-version: 22
 
+      - name: Initiera databasschema (DDL + seed)
+        env:
+          PGPASSWORD: snabbmat
+        run: psql "postgres://snabbmat:snabbmat@localhost:5432/snabbmat" -f db/init.sql
+
       - name: Installera paket (order-service)
         working-directory: services/order-service
         run: npm install
 
       - name: Kör tester (order-service)
         working-directory: services/order-service
+        env:
+          DATABASE_URL: postgres://snabbmat:snabbmat@localhost:5432/snabbmat
         run: npm test
