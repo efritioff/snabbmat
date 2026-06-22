@@ -91,19 +91,22 @@ services:
       - snabbmat-net
     # Reached via nginx at /api/orders.
 
-  # --- Kitchen: listens for order events -----------------------------------
+  # --- Kitchen: staff endpoints + listens for order events -----------------
   kitchen-service:
     build: ./services/kitchen-service
     environment:
       PORT: 3000
       RABBITMQ_URL: amqp://${RABBITMQ_DEFAULT_USER}:${RABBITMQ_DEFAULT_PASS}@rabbitmq:5672
+      # Kitchen reads/updates order status in the shared database.
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
     depends_on:
       rabbitmq:
         condition: service_healthy
+      postgres:
+        condition: service_healthy
     networks:
       - snabbmat-net
-    # No nginx routing: kitchen-service is reached only via RabbitMQ events,
-    # never directly over HTTP from outside.
+    # Reached via nginx at /api/kitchen (staff endpoints).
 
   # --- Notifications: listens for order events, notifies the customer ------
   notification-service:

@@ -25,14 +25,14 @@ export function publishEvent(routingKey: string, payload: unknown) {
 export async function consumeEvents(
   queueName: string,
   pattern: string,
-  handler: (routingKey: string, payload: any) => void
+  handler: (routingKey: string, payload: any) => void | Promise<void>
 ) {
   const q = await channel.assertQueue(queueName, { durable: true }); // 1. skapa vår kö
   await channel.bindQueue(q.queue, EXCHANGE, pattern);               // 2. koppla kön till etiketten
-  await channel.consume(q.queue, (msg: any) => {                     // 3. plocka meddelanden
+  await channel.consume(q.queue, async (msg: any) => {              // 3. plocka meddelanden
     if (!msg) return;
     const payload = JSON.parse(msg.content.toString());             // gör bytes → objekt igen
-    handler(msg.fields.routingKey, payload);                        // kör vår hanterare
+    await handler(msg.fields.routingKey, payload);                  // kör vår hanterare (väntar in DB)
     channel.ack(msg);                                               // 4. kvittera (klar!)
   });
   console.log(`Listening for "${pattern}" on queue "${queueName}"`);
