@@ -13,10 +13,12 @@ const orderSchema = z.object({
     .array(
       z.object({
         productId: z.number().int().positive(),
-        quantity: z.number().int().positive(),
+        // Övre gräns så ett orimligt antal inte spräcker INTEGER-kolumnen i DB.
+        quantity: z.number().int().positive().max(1000),
       })
     )
-    .min(1, "Order must contain at least one item"),
+    .min(1, "Order must contain at least one item")
+    .max(100, "Too many items in one order"),
 });
 
 const orderIdSchema = z.object({
@@ -46,6 +48,16 @@ app.post("/orders", async (request, reply) => {
   const priceMap = new Map<number, number>(
     priceRes.rows.map((r: { id: number; price: number }) => [r.id, r.price] as [number, number])
   );
+
+  // Avvisa okända produkter med ett tydligt klientfel (400) i stället för att
+  // låta ordern falla på en foreign key-krasch (som annars blir ett otydligt 500).
+  const unknown = items
+    .filter((i) => !priceMap.has(i.productId))
+    .map((i) => i.productId);
+  if (unknown.length > 0) {
+    return reply.code(400).send({ error: "Unknown product(s)", productIds: unknown });
+  }
+
   const total = items.reduce(
     (sum, i) => sum + (priceMap.get(i.productId) ?? 0) * i.quantity,
     0
@@ -68,12 +80,22 @@ app.post("/orders", async (request, reply) => {
     }
     await client.query("COMMIT");
 
-    const fullOrder = { ...order, items };
+    // Returnera/publicera items med samma fältnamn (product_id) som GET /orders/:id.
+    const responseItems = items.map((i) => ({
+      product_id: i.productId,
+      quantity: i.quantity,
+    }));
+    const fullOrder = { ...order, items: responseItems };
     publishEvent("order.created", fullOrder);
     return reply.code(201).send(fullOrder);
   } catch (err) {
-    await client.query("ROLLBACK");
+    // Logga det RIKTIGA felet först, så det inte döljs om ROLLBACK också fallerar.
     request.log.error(err);
+    try {
+      await client.query("ROLLBACK");
+    } catch (rollbackErr) {
+      request.log.error(rollbackErr);
+    }
     return reply.code(500).send({ error: "Could not create order" });
   } finally {
     client.release();

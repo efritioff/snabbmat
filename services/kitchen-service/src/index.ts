@@ -35,12 +35,23 @@ app.post("/orders/:id/ready", async (request, reply) => {
   }
   const { id } = parsed.data;
 
+  // Markera klar ENBART om ordern är under tillagning (IN_PROGRESS).
+  // Det gör anropet idempotent: en redan klar order publicerar inte order.ready
+  // igen (annars skulle kunden få dubbla notiser).
   const result = await pool.query(
-    "UPDATE orders SET status = 'READY' WHERE id = $1 RETURNING *",
+    "UPDATE orders SET status = 'READY' WHERE id = $1 AND status = 'IN_PROGRESS' RETURNING *",
     [id]
   );
+
   if (result.rows.length === 0) {
-    return reply.code(404).send({ error: "Order not found" });
+    // Inget uppdaterades — antingen finns ordern inte, eller så är den i fel status.
+    const exists = await pool.query("SELECT status FROM orders WHERE id = $1", [id]);
+    if (exists.rows.length === 0) {
+      return reply.code(404).send({ error: "Order not found" });
+    }
+    return reply
+      .code(409)
+      .send({ error: "Order is not in progress", status: exists.rows[0].status });
   }
 
   const order = result.rows[0];

@@ -31,9 +31,27 @@ export async function consumeEvents(
   await channel.bindQueue(q.queue, EXCHANGE, pattern);               // 2. koppla kön till etiketten
   await channel.consume(q.queue, async (msg: any) => {              // 3. plocka meddelanden
     if (!msg) return;
-    const payload = JSON.parse(msg.content.toString());             // gör bytes → objekt igen
-    await handler(msg.fields.routingKey, payload);                  // kör vår hanterare (väntar in DB)
-    channel.ack(msg);                                               // 4. kvittera (klar!)
+
+    // Trasigt meddelande (går inte att tolka som JSON) -> släng det, lägg inte
+    // tillbaka det (annars loopar det för evigt).
+    let payload: any;
+    try {
+      payload = JSON.parse(msg.content.toString());
+    } catch (err) {
+      console.error("Malformed message, dropping:", err);
+      channel.nack(msg, false, false);
+      return;
+    }
+
+    // Kör hanteraren. Lyckas den -> kvittera (ack). Misslyckas den (t.ex. DB nere)
+    // -> lägg tillbaka i kön (requeue) så den kan försökas igen senare.
+    try {
+      await handler(msg.fields.routingKey, payload);
+      channel.ack(msg);                                            // 4. kvittera (klar!)
+    } catch (err) {
+      console.error(`Handler failed for "${msg.fields.routingKey}", requeueing:`, err);
+      channel.nack(msg, false, true);
+    }
   });
   console.log(`Listening for "${pattern}" on queue "${queueName}"`);
 }

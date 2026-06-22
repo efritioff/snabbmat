@@ -1,5 +1,13 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, afterAll } from "vitest";
 import { app } from "./index.js";
+import { pool } from "./db.js";
+
+// Stäng databaskopplingen och appen när testerna är klara, så processen
+// avslutas rent (inga öppna handtag).
+afterAll(async () => {
+  await app.close();
+  await pool.end();
+});
 
 // Testar den riktiga POST /orders-rutten med Fastifys inbyggda inject().
 // inject() "låtsas-skickar" ett HTTP-anrop till appen i minnet — ingen riktig
@@ -38,6 +46,18 @@ describe("POST /orders", () => {
     });
 
     expect(response.statusCode).toBe(400);
+    expect(response.json().error).toBe("Invalid order");
+  });
+
+  it("avvisar okänd produkt med 400", async () => {
+    const response = await app.inject({
+      method: "POST",
+      url: "/orders",
+      payload: { items: [{ productId: 999999, quantity: 1 }] },
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json().error).toBe("Unknown product(s)");
   });
 });
 
